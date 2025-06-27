@@ -33,20 +33,15 @@ export default function Command() {
     <Detail
       navigationTitle={greeting}
       isLoading={loading}
-      markdown={`# ${greeting}\n\n${adviceMarkdown}\n\n${quote}${musicMarkdown}${travelMarkdown}`}
+      markdown={`# ${greeting} 👋\n\n> ${quote}\n\n---\n\n${adviceMarkdown}\n\n### 🌦️ Weather for New Delhi\n\n${weather ? `• **${weather.temp}°C**  _(${weather.description})_\n• **Humidity:** ${weather.humidity}% (${humidityInfo.label})\n• **Heat Index:** ${weather.heatIndex || '–'}°C\n• **Pressure:** ${weather.pressure || '–'} hPa\n• **Rain Chance:** ${weather.rainProbability !== undefined ? weather.rainProbability + '%' : '–'}` : loading ? 'Loading weather...' : 'No weather data.'}\n\n${travelMarkdown}`}
       actions={
         <ActionPanel>
           <ActionPanel.Section title="Music & Travel">
-            <Action.OpenInBrowser
-              title="Open Spotify"
-              url="https://open.spotify.com/"
-              icon={{ source: "Spotify Logo Green.png", tintColor: "#1DB954" }}
-            />
-            <Action.OpenInBrowser
-              title="Open Apple Music"
-              url="https://music.apple.com/"
-              icon={{ source: "Apple Music Logo.webp", tintColor: "#FA233B" }}
-            />
+          <Action.OpenInBrowser
+            title="Open Apple Music"
+            url="https://music.apple.com/"
+            icon={{ source: "Apple Music Logo.webp", tintColor: "#FA233B" }}
+          />
             <Action.OpenInBrowser
               title="Check Travel Time to IGI Airport T3"
               url="https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=IGI+Airport+T3+Delhi"
@@ -58,29 +53,30 @@ export default function Command() {
       metadata={
         <Detail.Metadata>
           <Detail.Metadata.Label
-            title="Current Time"
+            title="⏰ Time"
             text={{ value: time, color: Color.Orange }}
             icon={steveJobsPic}
           />
+          <Detail.Metadata.Separator />
           <Detail.Metadata.Label
-            title="Weather in New Delhi"
+            title="🌤️ Weather"
             text={weather ? `${weather.temp}°C, ${weather.description}` : loading ? "Loading..." : "Unavailable"}
-            icon="🌤"
           />
           <Detail.Metadata.Label
-            title="Heat Index"
+            title="🌡️ Heat Index"
             text={weather && weather.heatIndex !== undefined ? `${weather.heatIndex}°C` : loading ? "Loading..." : "Unavailable"}
-            icon="🌡️"
           />
           <Detail.Metadata.Label
-            title="Humidity"
+            title="💧 Humidity"
             text={weather && weather.humidity !== undefined ? `${weather.humidity}% (${humidityInfo.label})` : loading ? "Loading..." : "Unavailable"}
-            icon="💧"
           />
           <Detail.Metadata.Label
-            title="Pressure"
+            title="🧭 Pressure"
             text={weather && weather.pressure !== undefined ? `${weather.pressure} hPa` : loading ? "Loading..." : "Unavailable"}
-            icon="🧭"
+          />
+          <Detail.Metadata.Label
+            title="🌧️ Rain Probability"
+            text={weather && weather.rainProbability !== undefined ? `${weather.rainProbability}%` : loading ? "Loading..." : "Unavailable"}
           />
         </Detail.Metadata>
       }

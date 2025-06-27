@@ -4,6 +4,7 @@ export type WeatherData = {
   heatIndex?: number;
   humidity?: number;
   pressure?: number;
+  rainProbability?: number;
 };
 
 const NEW_DELHI_COORDS = { lat: 28.6139, lon: 77.2090 };
@@ -11,15 +12,16 @@ const NEW_DELHI_COORDS = { lat: 28.6139, lon: 77.2090 };
 export async function getWeatherData(): Promise<WeatherData | null> {
   try {
     const res = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${NEW_DELHI_COORDS.lat}&longitude=${NEW_DELHI_COORDS.lon}&current_weather=true&hourly=apparent_temperature,relative_humidity_2m,surface_pressure`
+      `https://api.open-meteo.com/v1/forecast?latitude=${NEW_DELHI_COORDS.lat}&longitude=${NEW_DELHI_COORDS.lon}&current_weather=true&hourly=apparent_temperature,relative_humidity_2m,surface_pressure,precipitation_probability`
     );
     const data: any = await res.json();
     const temp = data.current_weather.temperature;
     const code = data.current_weather.weathercode;
-    // Find the current hour's apparent temperature, humidity, and pressure
+    // Find the current hour's apparent temperature, humidity, pressure, and precipitation probability
     let heatIndex: number | undefined = undefined;
     let humidity: number | undefined = undefined;
     let pressure: number | undefined = undefined;
+    let rainProbability: number | undefined = undefined;
     if (data.hourly && data.hourly.time) {
       const now = new Date();
       const currentHour = now.toISOString().slice(0, 13); // e.g., '2024-06-07T14'
@@ -28,6 +30,7 @@ export async function getWeatherData(): Promise<WeatherData | null> {
         if (data.hourly.apparent_temperature) heatIndex = data.hourly.apparent_temperature[idx];
         if (data.hourly.relative_humidity_2m) humidity = data.hourly.relative_humidity_2m[idx];
         if (data.hourly.surface_pressure) pressure = data.hourly.surface_pressure[idx];
+        if (data.hourly.precipitation_probability) rainProbability = data.hourly.precipitation_probability[idx];
       }
     }
     // Simple mapping for weather code
@@ -61,7 +64,7 @@ export async function getWeatherData(): Promise<WeatherData | null> {
       96: "Thunderstorm with hail",
       99: "Thunderstorm with heavy hail",
     };
-    return { temp, description: codeMap[code] || "Unknown", heatIndex, humidity, pressure };
+    return { temp, description: codeMap[code] || "Unknown", heatIndex, humidity, pressure, rainProbability };
   } catch (e) {
     return null;
   }
