@@ -1,3 +1,5 @@
+import { getPreferenceValues } from "@raycast/api";
+
 export type WeatherData = {
   temp: number;
   description: string;
@@ -7,12 +9,12 @@ export type WeatherData = {
   rainProbability?: number;
 };
 
-const NEW_DELHI_COORDS = { lat: 28.6139, lon: 77.2090 };
-
 export async function getWeatherData(): Promise<WeatherData | null> {
+  const { latitude, longitude } = getPreferenceValues<{ latitude: string; longitude: string }>();
+
   try {
     const res = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${NEW_DELHI_COORDS.lat}&longitude=${NEW_DELHI_COORDS.lon}&current_weather=true&hourly=apparent_temperature,relative_humidity_2m,surface_pressure,precipitation_probability`
+      `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&hourly=apparent_temperature,relative_humidity_2m,surface_pressure,precipitation_probability`
     );
     const data: any = await res.json();
     const temp = data.current_weather.temperature;

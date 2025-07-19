@@ -1,83 +1,121 @@
-import { Detail, Color, ActionPanel, Action } from "@raycast/api";
-import { useEffect, useState } from "react";
-import { getWeatherData, WeatherData, getHumidityDescription } from "./weather";
+import { Action, ActionPanel, Detail, getPreferenceValues, List } from "@raycast/api";
+import { usePromise } from "@raycast/utils";
+import { getWeatherData, getHumidityDescription } from "./weather";
 import { getCurrentTime, getGreeting } from "./time";
 import { getRandomQuote } from "./quotes";
+import { getTodos, Todo, completeTodo, deleteTodo } from "./todo-manager";
+import { AddTodoForm } from "./add-todo-form";
+import { ManageTodosView } from "./manage-todos-view";
+import { formatReminderTime } from "./time-parser";
 
-const steveJobsPic = "steve-jobs.png"; // Use this if you add the file, otherwise fallback to a music logo
+interface Preferences {
+  userName: string;
+  latitude: string;
+  longitude: string;
+  workAddress: string;
+}
 
 export default function Command() {
+  const preferences = getPreferenceValues<Preferences>();
+  const {
+    data: weather,
+    isLoading: weatherLoading,
+    revalidate: revalidateWeather,
+  } = usePromise(getWeatherData);
+  const {
+    data: todos,
+    isLoading: todosLoading,
+    revalidate: revalidateTodos,
+  } = usePromise(async () => {
+    const allTodos = await getTodos();
+    const incomplete = allTodos.filter((todo: Todo) => !todo.completed);
+    const completed = allTodos.filter((todo: Todo) => todo.completed);
+    return { incomplete, completed };
+  });
+
   const time = getCurrentTime();
-  const greeting = getGreeting();
+  const greeting = getGreeting(preferences.userName);
   const quote = getRandomQuote();
-  const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setLoading(true);
-    getWeatherData().then((data) => {
-      setWeather(data);
-      setLoading(false);
-    });
-  }, []);
+  const commuteUrl = preferences.workAddress
+    ? `https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${encodeURIComponent(
+        preferences.workAddress,
+      )}`
+    : "https://www.google.com/maps";
 
-  const humidityInfo = getHumidityDescription(weather?.humidity);
+  const weatherMarkdown = weather
+    ? `### 🌦️ Weather\n\n*   **${weather.temp}°C**, ${
+        weather.description
+      }\n*   **💧 Humidity:** ${weather.humidity ?? "–"}%\n*   **🌡️ Heat Index:** ${
+        weather.heatIndex ?? "–"
+      }°C\n\n**☀️ Sun Safety:** ${
+        getHumidityDescription(weather.humidity).sunSafety
+      }\n\n**🌱 Environmental Advice:** ${getHumidityDescription(weather.humidity).advice}`
+    : "Loading weather...";
 
-  const adviceMarkdown = `**☀️ Sun Safety:** ${humidityInfo.sunSafety}\n\n**🌱 Environmental Advice:** ${humidityInfo.advice}`;
+  const todoMarkdown = `### ✅ To-Do\n\n${
+    todos?.incomplete.map((todo: Todo) => {
+      const reminderText = todo.reminderTime ? ` (🔔 ${formatReminderTime(todo.reminderTime)})` : '';
+      return `- [ ] ${todo.title}${reminderText}`;
+    }).join("\n") || "No tasks"
+  }\n\n### 👍 Completed\n\n${
+    todos?.completed.map((todo: Todo) => `- [x] ${todo.title}`).join("\n") || "No tasks"
+  }`;
 
-  // Use markdown to introduce the music section
-  const musicMarkdown = `\n---\n\n## 🎵 Start your day with music\n`;
-  const travelMarkdown = `\n---\n\n## ✈️ Check your commute\n`;
+  function revalidateAll() {
+    revalidateWeather();
+    revalidateTodos();
+  }
+
+  async function handleComplete(id: string) {
+    await completeTodo(id);
+    revalidateTodos();
+  }
+
+  async function handleDelete(id: string) {
+    await deleteTodo(id);
+    revalidateTodos();
+  }
 
   return (
     <Detail
+      isLoading={weatherLoading || todosLoading}
       navigationTitle={greeting}
-      isLoading={loading}
-      markdown={`# ${greeting} 👋\n\n> ${quote}\n\n---\n\n${adviceMarkdown}\n\n### 🌦️ Weather for New Delhi\n\n${weather ? `• **${weather.temp}°C**  _(${weather.description})_\n• **Humidity:** ${weather.humidity}% (${humidityInfo.label})\n• **Heat Index:** ${weather.heatIndex || '–'}°C\n• **Pressure:** ${weather.pressure || '–'} hPa\n• **Rain Chance:** ${weather.rainProbability !== undefined ? weather.rainProbability + '%' : '–'}` : loading ? 'Loading weather...' : 'No weather data.'}\n\n${travelMarkdown}`}
+      markdown={`# ${greeting} 👋\n\n> ${quote}\n\n---\n\n${weatherMarkdown}\n\n---\n\n${todoMarkdown}`}
       actions={
         <ActionPanel>
-          <ActionPanel.Section title="Music & Travel">
-          <Action.OpenInBrowser
-            title="Open Apple Music"
-            url="https://music.apple.com/"
-            icon={{ source: "Apple Music Logo.webp", tintColor: "#FA233B" }}
+          <Action.Push title="Add Todo" target={<AddTodoForm revalidate={revalidateTodos} />} />
+          <Action.Push
+            title="Manage Todos"
+            target={<ManageTodosView todos={todos} revalidate={revalidateTodos} />}
           />
-            <Action.OpenInBrowser
-              title="Check Travel Time to IGI Airport T3"
-              url="https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=IGI+Airport+T3+Delhi"
-              icon={{ source: "🗺️" }}
-            />
-          </ActionPanel.Section>
+          <Action.OpenInBrowser title="Check Commute" url={commuteUrl} />
+          <Action title="Refresh" onAction={revalidateAll} />
         </ActionPanel>
       }
       metadata={
         <Detail.Metadata>
-          <Detail.Metadata.Label
-            title="⏰ Time"
-            text={{ value: time, color: Color.Orange }}
-            icon={steveJobsPic}
-          />
+          <Detail.Metadata.TagList title="Pending Tasks">
+            {todos?.incomplete.map((todo: Todo) => (
+              <Detail.Metadata.TagList.Item
+                key={todo.id}
+                text={todo.reminderTime ? `${todo.title} 🔔` : todo.title}
+                color={"#FF6B6B"}
+                onAction={() => handleComplete(todo.id)}
+              />
+            ))}
+          </Detail.Metadata.TagList>
           <Detail.Metadata.Separator />
-          <Detail.Metadata.Label
-            title="🌤️ Weather"
-            text={weather ? `${weather.temp}°C, ${weather.description}` : loading ? "Loading..." : "Unavailable"}
-          />
-          <Detail.Metadata.Label
-            title="🌡️ Heat Index"
-            text={weather && weather.heatIndex !== undefined ? `${weather.heatIndex}°C` : loading ? "Loading..." : "Unavailable"}
-          />
-          <Detail.Metadata.Label
-            title="💧 Humidity"
-            text={weather && weather.humidity !== undefined ? `${weather.humidity}% (${humidityInfo.label})` : loading ? "Loading..." : "Unavailable"}
-          />
-          <Detail.Metadata.Label
-            title="🧭 Pressure"
-            text={weather && weather.pressure !== undefined ? `${weather.pressure} hPa` : loading ? "Loading..." : "Unavailable"}
-          />
-          <Detail.Metadata.Label
-            title="🌧️ Rain Probability"
-            text={weather && weather.rainProbability !== undefined ? `${weather.rainProbability}%` : loading ? "Loading..." : "Unavailable"}
-          />
+          <Detail.Metadata.TagList title="Completed Tasks">
+            {todos?.completed.map((todo: Todo) => (
+              <Detail.Metadata.TagList.Item
+                key={todo.id}
+                text={todo.title}
+                color={"#4CAF50"}
+                onAction={() => handleDelete(todo.id)}
+              />
+            ))}
+          </Detail.Metadata.TagList>
         </Detail.Metadata>
       }
     />
