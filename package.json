@@ -16,6 +16,39 @@
       "mode": "view"
     }
   ],
+  "preferences": [
+    {
+      "name": "userName",
+      "title": "Your Name",
+      "description": "Enter your first name to be displayed in the greeting.",
+      "type": "textfield",
+      "required": true,
+      "default": "there"
+    },
+    {
+      "name": "latitude",
+      "title": "Latitude",
+      "description": "Latitude for weather forecast.",
+      "type": "textfield",
+      "required": true,
+      "default": "28.6139"
+    },
+    {
+      "name": "longitude",
+      "title": "Longitude",
+      "description": "Longitude for weather forecast.",
+      "type": "textfield",
+      "required": true,
+      "default": "77.2090"
+    },
+    {
+      "name": "workAddress",
+      "title": "Work Address",
+      "description": "Your work address for commute time.",
+      "type": "textfield",
+      "required": false
+    }
+  ],
   "dependencies": {
     "@raycast/api": "^1.100.2",
     "@raycast/utils": "^1.17.0"
@@ -35,5 +68,6 @@
     "lint": "ray lint",
     "prepublishOnly": "echo \"\\n\\nIt seems like you are trying to publish the Raycast extension to npm.\\n\\nIf you did intend to publish it to npm, remove the \\`prepublishOnly\\` script and rerun \\`npm publish\\` again.\\nIf you wanted to publish it to the Raycast Store instead, use \\`npm run publish\\` instead.\\n\\n\" && exit 1",
     "publish": "npx @raycast/api@latest publish"
-  }
+  },
+  "permissions": ["calendar"]
 }
